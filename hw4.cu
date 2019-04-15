@@ -26,11 +26,15 @@ __global__ void trap_appx(int iters, int max_iters, double dx, double *global_su
     local_sum += ((p2 + p1) / 2) * dx;
   }
 
+  //printf("%d's local sum is %2.6f\n", id, local_sum);
   atomicAdd(&shared_sum, local_sum);
+  __syncthreads();
+  //printf("%d's shared sum is %2.6f\n", id, shared_sum);
 
   if (threadIdx.x == 0) {
     atomicAdd(global_sum, shared_sum);
   }
+  __syncthreads();
 
 }
 
@@ -75,12 +79,13 @@ int main(int argc, char *argv[]) {
 
   trap_appx <<< grid_size, 256 >>> (iters_per_thread, trapezoids, incr, d_sum);
   cudaMemcpy(h_sum, d_sum, sizeof(double), cudaMemcpyDeviceToHost);
+  cudaDeviceSynchronize();
 
   cudaEventRecord(after);
   cudaEventElapsedTime(&time, before, after);
 
   printf("Final result is: %2.8f\n", *h_sum);
-  printf("Time taken: %2.6f", time);
+  printf("Time taken: %2.6f\n", time);
 
 
   return 0;
